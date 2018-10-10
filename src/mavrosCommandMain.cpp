@@ -4,15 +4,13 @@
 #include <math.h>
 #include "mavrosCommand.hpp"
 #include <nlohmann/json.hpp>
-#include <GeographicLib/UTMUPS.hpp>
 
 using namespace std;
-using namespace GeographicLib;
 
-double latitude[25];
-double longitude[25];
+double latitude[65];
+double longitude[65];
 int pointsCount = 0;
-float missionAltitude = 5;
+float missionAltitude = 0.5;
 int yawMapping;
 #define PI 3.14159265
 
@@ -36,10 +34,8 @@ bool isInit = false;
 double homeLatitude;
 double homeLongitude;
 double homeAltitude;
-bool isMapping = false; //is drone mapping at the moment
 bool precisionLanding = false;
 double dronAltitude;
-double pictureFrequency = 40; //40 = 1 photo per  two seconds
 
 
 //Czestotliwosc do ustawienia w Hz
@@ -58,7 +54,6 @@ void takeOffHome(mavrosCommand command);
 void nextPoint(mavrosCommand command);
 void flyHome(mavrosCommand command);
 void landHome(mavrosCommand command);
-void getLatLongShift(mavrosCommand command, double length, double angle, double pointLatitude, double pointLongitude);
 bool getCordinates(mavrosCommand command);
 
 int main(int argc, char* argv[]){
@@ -89,15 +84,6 @@ int main(int argc, char* argv[]){
 		if(loopCounter >= 10){
 			mission(command);
 			loopCounter = 0;
-		}
-		
-		if(loopCounter1 >= pictureFrequency && isMapping == true){
-			//if((command.getCompassHeading() >= yawMapping - 15 && command.getCompassHeading() >= yawMapping + 15) ||
-			 //  (command.getCompassHeading() >= yawMapping - 15 + 180 && command.getCompassHeading() >= yawMapping + 15 + 180)){
-					command.picture();
-					loopCounter1 = 0;
-			//}
-			//cout<<"Compass="<<command.getCompassHeading()<<" yaw="<<yawMapping<<endl;
 		}
 		
 		loopCounter++;
@@ -184,6 +170,8 @@ void nextPoint(mavrosCommand command){
 	cout<<"CURRENT POSITION: ";
 	cout<<fixed << setprecision(7) << command.getGlobalPositionLatitude()<<", ";
 	cout<<fixed << setprecision(7) << command.getGlobalPositionLongitude()<<" ";
+	cout<<" CURRENT ALTITUDE: ";
+	cout<< command.getGlobalPositionAltitude() - homeAltitude<<endl;
 	
 	if(command.isInPosition(command.getGlobalPositionLatitude(), command.getGlobalPositionLongitude(), latitude[i], longitude[i], cordinatesPrecision)){
 		
@@ -194,17 +182,6 @@ void nextPoint(mavrosCommand command){
 			dronAltitude = 5;
 			command.flyTo(homeLatitude, homeLongitude, dronAltitude);
 			return;
-		}
-		
-		if(i % 5 == 1)
-		{
-			isMapping = true;
-			cordinatesPrecision = 0.00002;
-		}
-		else
-		{
-			 isMapping = false;
-			 cordinatesPrecision = 0.00005;
 		}
 		
 		command.flyTo(latitude[i], longitude[i], missionAltitude);
@@ -232,24 +209,8 @@ void landHome(mavrosCommand command){
 	}
 }
 
-void getLatLongShift(mavrosCommand command, double length, double angle, double* pointLatitude, double* pointLongitude)
-{
-	double easting, northing;
-	int zone;
- 	bool northp;
-	UTMUPS::Forward(*pointLatitude, *pointLongitude, zone, northp, easting, northing);
-	
-	double longitudeShift = length * sin(command.toRad(angle));
-	double latitudeShift = length * cos(command.toRad(angle));
-	
-	northing += longitudeShift;
-	easting += latitudeShift;
-	
-	UTMUPS::Reverse(zone, northp, easting, northing, *pointLatitude, *pointLongitude);
-}
-
 bool getCordinates(mavrosCommand command){
-	ifstream theFile("/home/w0rt4/drony/catkin_ws/src/mission1/mission.json");
+	ifstream theFile("/home/w0rt4/drony/catkin_ws/src/mission2/mission.json");
 	json missionSettings = json::parse(theFile);
 	theFile.close();
 	
@@ -261,7 +222,6 @@ bool getCordinates(mavrosCommand command){
  	bool northp;
  	
  	missionAltitude = missionSettings["mission"]["altitude"];
- 	pictureFrequency = missionSettings["mission"]["photosFrequency"];
  	
  	double leftDownLongitude = missionSettings["mission"]["leftDown"]["longitude"];
  	double leftDownLatitude = missionSettings["mission"]["leftDown"]["latitude"];
@@ -272,16 +232,14 @@ bool getCordinates(mavrosCommand command){
  	
  	int direction = directions(FromStartLine);
  	
- 	int pointsOnSingleScan = 2;
- 	int scanCount = ceil(command.distanceBetweenCordinates(leftDownLatitude, leftDownLongitude, rightDownLatitude, rightDownLongitude) / 19);
- 	double distanceBetweenSingleScan = command.distanceBetweenCordinates(leftDownLatitude, leftDownLongitude, rightDownLatitude, rightDownLongitude) / scanCount;
-	
+ 	int pointsOnSingleScan = 8;
+ 	int scanCount = 8;
+ 	
 	if(missionAltitude == 0 || leftDownLatitude == 0 || leftUpLatitude == 0 || rightDownLatitude == 0 || leftDownLongitude == 0 || leftUpLongitude == 0 || rightDownLongitude == 0)
 	{
 		return false;
 	}	 
 	
-	pictureFrequency = pictureFrequency * 20;
 	yawMapping = atan((leftUpLongitude - leftDownLongitude) * 0.67 / (leftUpLatitude - leftDownLatitude) * 1.11) * 180 / PI;
 
 	if(leftUpLongitude - leftDownLongitude >= 0 && leftUpLatitude - leftDownLatitude == 0)
@@ -336,23 +294,6 @@ bool getCordinates(mavrosCommand command){
 			x_pom = x + x_wsp_14;
 			y_pom = y + y_wsp_14;
 			
-			// Zakrety test
-			getLatLongShift(command, 9.2, 70, &x, &y);
-			latitude[pointsCount] = x;
-			longitude[pointsCount] = y;
-			pointsCount++;
-			
-			getLatLongShift(command, 5.4, 54, &x, &y);
-			latitude[pointsCount] = x;
-			longitude[pointsCount] = y;
-			pointsCount++;
-			
-			getLatLongShift(command, 5, 4, &x, &y);
-			latitude[pointsCount] = x;
-			longitude[pointsCount] = y;
-			pointsCount++;
-			//
-			
 			direction = directions(ToStartLine);
 	   }
 		else if(direction == directions(ToStartLine))
@@ -374,27 +315,6 @@ bool getCordinates(mavrosCommand command){
 			
 			x_pom = x + x_wsp_14;
 			y_pom = y + y_wsp_14;
-			
-			if(jk < scanCount - 1) 
-			{
-				// Zakrety test
-				getLatLongShift(command, 9.2, 340, &x, &y);
-				latitude[pointsCount] = x;
-				longitude[pointsCount] = y;
-				pointsCount++;
-			
-				getLatLongShift(command, 5, 360, &x, &y);
-				latitude[pointsCount] = x;
-				longitude[pointsCount] = y;
-				pointsCount++;
-			
-				getLatLongShift(command, 5, 30, &x, &y);
-				latitude[pointsCount] = x;
-				longitude[pointsCount] = y;
-				pointsCount++;
-				//
-			}
-			
 			direction = directions(FromStartLine);
 	   }
 	}
