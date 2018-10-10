@@ -1,0 +1,18 @@
+{
+	"mission": {
+		"altitude": 30,
+		"photosFrequency": 2,
+		"leftDown": {
+			"latitude": 53.117720,
+			"longitude": 23.147192
+		},
+		"leftUp": {
+			"latitude": 53.118805,
+			"longitude": 23.146585
+		},
+		"rightDown": {
+			"latitude": 53.117935,
+			"longitude": 23.148224
+		}
+	}
+}
