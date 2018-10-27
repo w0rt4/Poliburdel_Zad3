@@ -4,6 +4,9 @@
 #include <math.h>
 #include "mavrosCommand.hpp"
 #include <nlohmann/json.hpp>
+#include <wiringPi.h>
+#include "ros/ros.h"
+#include "sensor_msgs/LaserScan.h"
 
 using namespace std;
 
@@ -58,7 +61,16 @@ bool getCordinates(mavrosCommand command);
 
 int main(int argc, char* argv[]){
 
-	ros::init(argc, argv, "beginner_tutorials");
+	wiringPiSetup();
+    pinMode(6, OUTPUT);
+ 
+    digitalWrite(6, HIGH);
+    delay(1000);
+    digitalWrite(6, LOW); 
+    delay(1000);
+
+
+	/*ros::init(argc, argv, "beginner_tutorials");
 	mavrosCommand command;
 	
 	ros::Rate loop_rate(frequency);
@@ -70,14 +82,14 @@ int main(int argc, char* argv[]){
 	if(getCordinates(command) == false){
 		cout<<"FILE mission.txt IS DAMAGED!"<<endl;
 		return 0;
-	}
+	}*/
 	/*
 	for(i=0; i<ile; i++){
 		cout<<fixed << setprecision(7) << latitude[i] <<", ";
 		cout<<fixed << setprecision(7) << longitude[i] <<endl;
 	}
 	*/
-	i=0;
+	/*i=0;
 	
 	while (ros::ok()) {
 		
@@ -91,7 +103,7 @@ int main(int argc, char* argv[]){
 		ros::spinOnce();
 		loop_rate.sleep();
 	}	
-	
+*/	
 	return 0;
 }
 

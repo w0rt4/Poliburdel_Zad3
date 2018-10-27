@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(treasure_hunting)
+project(rescue)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
@@ -15,7 +15,16 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
 )
 
-find_package (GeographicLib 1.34 REQUIRED)
+find_package(Boost REQUIRED COMPONENTS system)
+
+set(wiringPi_include "usr/local/include")
+
+include_directories(
+${catkin_INCLUDE_DIRS}
+${wiringPi_include}
+)
+
+LINK_DIRECTORIES("usr/local/lib")
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -125,8 +134,8 @@ include
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(treasure_hunting src/mavrosCommandMain.cpp src/mavrosCommand.cpp)
-target_link_libraries(treasure_hunting ${catkin_LIBRARIES})
+add_executable(rescue src/mavrosCommandMain.cpp src/mavrosCommand.cpp)
+target_link_libraries(rescue ${catkin_LIBRARIES} wiringPi)
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
