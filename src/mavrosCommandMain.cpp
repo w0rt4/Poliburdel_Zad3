@@ -98,13 +98,12 @@ int main(int argc, char* argv[])
 	sleep(1);
 
     u_result     op_result;
-
-    printf("Ultra simple LIDAR data grabber for RPLIDAR.\n"
-			 "Version: " RPLIDAR_SDK_VERSION "\n");
+    printf("RPLIDAR Version: " RPLIDAR_SDK_VERSION "\n");
 
     // create the driver instance
 	RPlidarDriver * drv = RPlidarDriver::CreateDriver(DRIVER_TYPE_SERIALPORT);
-    if (!drv) {
+    if (!drv)
+    {
         fprintf(stderr, "insufficent memory, exit\n");
         exit(-2);
     }
@@ -113,27 +112,29 @@ int main(int argc, char* argv[])
     bool connectSuccess = false;
     // make connection...
     
-        if(!drv)
-            drv = RPlidarDriver::CreateDriver(DRIVER_TYPE_SERIALPORT);
-        if (IS_OK(drv->connect("/dev/ttyUSB0", 256000)))
-        {
-            op_result = drv->getDeviceInfo(devinfo);
+    if(!drv)
+    {
+		drv = RPlidarDriver::CreateDriver(DRIVER_TYPE_SERIALPORT);
+	}
+	
+	if (IS_OK(drv->connect("/dev/ttyUSB0", 256000)))
+	{
+		op_result = drv->getDeviceInfo(devinfo);
 
-            if (IS_OK(op_result)) 
-            {
-                connectSuccess = true;
-            }
-            else
-            {
-                delete drv;
-                drv = NULL;
-            }
-        }
+		if (IS_OK(op_result)) 
+		{
+			connectSuccess = true;
+		}
+		else
+		{
+			delete drv;
+			drv = NULL;
+		}
+	}
 
-    if (!connectSuccess) {
-        
-        fprintf(stderr, "Error, cannot bind to the specified serial port %s.\n"
-            , "/dev/ttyUSB0");
+    if (!connectSuccess) 
+    {    
+        fprintf(stderr, "Error, cannot bind to the specified serial port /dev/ttyUSB0.\n");
         goto on_finished;
     }
 
@@ -157,16 +158,17 @@ int main(int argc, char* argv[])
         goto on_finished;
     }
     
+    printf("Starting RPLIDAR motor.\n");
     drv->startMotor();
-    // start scan...
+	printf("Starting RPLIDAR scaning.\n");
     drv->startScan(0,1);
 
     // fetech result and print it out...
     while (ros::ok()) {
-        rplidar_response_measurement_node_t nodes[8192];
+        rplidar_response_measurement_node_hq_t nodes[8192];
         size_t   count = _countof(nodes);
 
-        op_result = drv->grabScanData(nodes, count);
+        op_result = drv->grabScanDataHq(nodes, count);
 
         if (IS_OK(op_result)) {
             drv->ascendScanData(nodes, count);
@@ -179,10 +181,10 @@ int main(int argc, char* argv[])
             }*/
             
             printf("%s theta: %03.2f Dist: %08.2f Q: %d \n", 
-                (nodes[0].sync_quality & RPLIDAR_RESP_MEASUREMENT_SYNCBIT) ? "S " : "  ", 
-                (nodes[0].angle_q6_checkbit >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT) / 64.0f,
-                nodes[0].distance_q2 / 4.0f,
-                nodes[0].sync_quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT);
+                (nodes[0].quality & RPLIDAR_RESP_MEASUREMENT_SYNCBIT) ? "S " : "  ", 
+                (nodes[0].angle_z_q14 >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT) / 64.0f,
+                nodes[0].dist_mm_q2 / 4.0f,
+                nodes[0].quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT);
             
         }
 		
@@ -190,12 +192,13 @@ int main(int argc, char* argv[])
 		loop_rate.sleep();
     }
 
-	cout<< "Stoping motors"<<endl;
+	printf("Stoping RPLIDAR motor.\n");
     drv->stop();
     drv->stopMotor();
     
     // done!
 on_finished:
+	printf("Disposing RPLIDAR driver.\n");
     RPlidarDriver::DisposeDriver(drv);
     drv = NULL;
 
