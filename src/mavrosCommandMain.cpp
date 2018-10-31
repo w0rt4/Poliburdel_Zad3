@@ -5,9 +5,9 @@
 #include "mavrosCommand.hpp"
 #include <nlohmann/json.hpp>
 #include <wiringPi.h>
-#include "ros/ros.h"
 #include "sensor_msgs/LaserScan.h"
 #include "rplidar.h"
+#include "radarController.hpp"
 
 using namespace std;
 
@@ -67,175 +67,54 @@ bool getCordinates(mavrosCommand command);
 
 using namespace rp::standalone::rplidar;
 
-bool checkRPLIDARHealth(RPlidarDriver * drv)
-{
-    u_result     op_result;
-    rplidar_response_device_health_t healthinfo;
-
-    op_result = drv->getHealth(healthinfo);
-    if (IS_OK(op_result)) { // the macro IS_OK is the preperred way to judge whether the operation is succeed.
-        printf("RPLidar health status : %d\n", healthinfo.status);
-        if (healthinfo.status == RPLIDAR_STATUS_ERROR) {
-            fprintf(stderr, "Error, rplidar internal error detected. Please reboot the device to retry.\n");
-            drv->reset();
-            return false;
-        } else {
-            return true;
-        }
-
-    } else {
-        fprintf(stderr, "Error, cannot retrieve the lidar health code: %x\n", op_result);
-        return false;
-    }
-}
-
 int main(int argc, char* argv[])
 {
 	cout<<"initializaiton"<<endl;
 	ros::init(argc, argv, "rescue");
+	
 	mavrosCommand command;
+	RadarController radarController;
+	
 	ros::Rate loop_rate(10);
 	sleep(1);
 
     u_result     op_result;
     printf("RPLIDAR Version: " RPLIDAR_SDK_VERSION "\n");
-
-    // create the driver instance
-	RPlidarDriver * drv = RPlidarDriver::CreateDriver(DRIVER_TYPE_SERIALPORT);
-    if (!drv)
-    {
-        fprintf(stderr, "insufficent memory, exit\n");
-        exit(-2);
-    }
-    
-    rplidar_response_device_info_t devinfo;
-    bool connectSuccess = false;
-    // make connection...
-    
-    if(!drv)
-    {
-		drv = RPlidarDriver::CreateDriver(DRIVER_TYPE_SERIALPORT);
-	}
 	
-	if (IS_OK(drv->connect("/dev/ttyUSB0", 256000)))
-	{
-		op_result = drv->getDeviceInfo(devinfo);
+	radarController.Initialize();
 
-		if (IS_OK(op_result)) 
-		{
-			connectSuccess = true;
-		}
-		else
-		{
-			delete drv;
-			drv = NULL;
-		}
-	}
-
-    if (!connectSuccess) 
+    if (!radarController.ConnectionSuccess) 
     {    
         fprintf(stderr, "Error, cannot bind to the specified serial port /dev/ttyUSB0.\n");
-        goto on_finished;
+		return 1
     }
-
-    // print out the device serial number, firmware and hardware version number..
-    printf("RPLIDAR S/N: ");
-    for (int pos = 0; pos < 16 ;++pos) {
-        printf("%02X", devinfo.serialnum[pos]);
-    }
-
-    printf("\n"
-            "Firmware Ver: %d.%02d\n"
-            "Hardware Rev: %d\n"
-            , devinfo.firmware_version>>8
-            , devinfo.firmware_version & 0xFF
-            , (int)devinfo.hardware_version);
-
-
+    
+	radarController.PrintInfo();
 
     // check health...
-    if (!checkRPLIDARHealth(drv)) {
-        goto on_finished;
+    if (!radarController.CheckRPLIDARHealth()) {
+        return 1;
     }
     
-    printf("Starting RPLIDAR motor.\n");
-    drv->startMotor();
-	printf("Starting RPLIDAR scaning.\n");
-    drv->startScan(0,1);
+    radarController.StartScan();
 
     // fetech result and print it out...
-    while (ros::ok()) {
+    while (ros::ok())
+    {
         rplidar_response_measurement_node_hq_t nodes[8192];
-        size_t   count = _countof(nodes);
+        radarController.GetNodes(nodes); 
+        printf("%s theta: %03.2f Dist: %08.2f Q: %d \n", 
+			(nodes[0].quality & RPLIDAR_RESP_MEASUREMENT_SYNCBIT) ? "S " : "  ", 
+            (nodes[0].angle_z_q14 >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT) / 64.0f,
+            nodes[0].dist_mm_q2 / 4.0f,
+            nodes[0].quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT);
 
-        op_result = drv->grabScanDataHq(nodes, count);
-
-        if (IS_OK(op_result)) {
-            drv->ascendScanData(nodes, count);
-           /* for (int pos = 0; pos < (int)count ; ++pos) {
-                printf("%s theta: %03.2f Dist: %08.2f Q: %d \n", 
-                    (nodes[pos].sync_quality & RPLIDAR_RESP_MEASUREMENT_SYNCBIT) ?"S ":"  ", 
-                    (nodes[pos].angle_q6_checkbit >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT)/64.0f,
-                    nodes[pos].distance_q2/4.0f,
-                    nodes[pos].sync_quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT);
-            }*/
-            
-            printf("%s theta: %03.2f Dist: %08.2f Q: %d \n", 
-                (nodes[0].quality & RPLIDAR_RESP_MEASUREMENT_SYNCBIT) ? "S " : "  ", 
-                (nodes[0].angle_z_q14 >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT) / 64.0f,
-                nodes[0].dist_mm_q2 / 4.0f,
-                nodes[0].quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT);
-            
-        }
-		
 		ros::spinOnce();
 		loop_rate.sleep();
     }
 
-	printf("Stoping RPLIDAR motor.\n");
-    drv->stop();
-    drv->stopMotor();
-    
-    // done!
-on_finished:
-	printf("Disposing RPLIDAR driver.\n");
-    RPlidarDriver::DisposeDriver(drv);
-    drv = NULL;
+	radarController.EndScan();
 
-	/*ros::init(argc, argv, "beginner_tutorials");
-	mavrosCommand command;
-	
-	ros::Rate loop_rate(frequency);
-	sleep(1);
-	
-	
-	
-
-	if(getCordinates(command) == false){
-		cout<<"FILE mission.txt IS DAMAGED!"<<endl;
-		return 0;
-	}*/
-	/*
-	for(i=0; i<ile; i++){
-		cout<<fixed << setprecision(7) << latitude[i] <<", ";
-		cout<<fixed << setprecision(7) << longitude[i] <<endl;
-	}
-	*/
-	/*i=0;
-	
-	while (ros::ok()) {
-		
-		if(loopCounter >= 10){
-			mission(command);
-			loopCounter = 0;
-		}
-		
-		loopCounter++;
-		loopCounter1++;
-		ros::spinOnce();
-		loop_rate.sleep();
-	}	
-*/	
 	return 0;
 }
 
@@ -465,5 +344,3 @@ bool getCordinates(mavrosCommand command){
 	
 	return true;
 }
-
-
