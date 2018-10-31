@@ -48,5 +48,5 @@ include_directories(
 	${catkin_INCLUDE_DIRS}
 )
 
-add_executable(rescue src/mavrosCommandMain.cpp src/mavrosCommand.cpp ${RPLIDAR_SDK_SRC})
+add_executable(rescue src/mavrosCommandMain.cpp src/mavrosCommand.cpp ${RPLIDAR_SDK_SRC} src/radarController.cpp)
 target_link_libraries(rescue ${catkin_LIBRARIES} wiringPi)
