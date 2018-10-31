@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
     if (!radarController.ConnectionSuccess) 
     {    
         fprintf(stderr, "Error, cannot bind to the specified serial port /dev/ttyUSB0.\n");
-		return 1
+		return 1;
     }
     
 	radarController.PrintInfo();
