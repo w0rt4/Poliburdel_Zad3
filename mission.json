@@ -1,17 +1,13 @@
 {
 	"mission": {
 		"altitude": 0.5,
-		"leftDown": {
+		"start": {
 			"latitude": 53.117720,
 			"longitude": 23.147192
 		},
-		"leftUp": {
+		"target": {
 			"latitude": 53.117798,
 			"longitude": 23.147149
-		},
-		"rightDown": {
-			"latitude": 53.117763,
-			"longitude": 23.147311
 		}
 	}
 }

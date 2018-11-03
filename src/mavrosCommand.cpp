@@ -4,6 +4,14 @@
 using namespace std;
 #define PI 3.14159265
 
+string get_username() {
+    struct passwd *pwd = getpwuid(getuid());
+    if (pwd)
+        return pwd->pw_name;
+    else
+        return "odroid";
+}
+
 mavrosCommand::mavrosCommand(){
 	
 	_nh = ros::NodeHandle();
@@ -132,33 +140,43 @@ void mavrosCommand::servo(double width){//width 1000-2000
 	
 }
 
-void mavrosCommand::guided(){
+bool mavrosCommand::guided(){
 	
 	mavros_msgs::SetMode srvSetMode;
 	srvSetMode.request.custom_mode = "GUIDED";
 	_clientGuided.call(srvSetMode);
-	if (srvSetMode.response.mode_sent) {
-	cout << "GUIDED MODE SUCCESFUL" << endl;
-	}else cout << "GUIDED MODE FAIL" <<endl;
+	if (srvSetMode.response.mode_sent)
+	{
+		cout << "GUIDED MODE SUCCESFUL" << endl;
+		return true;
+	}
+	
+	cout << "GUIDED MODE FAIL" <<endl;
+	return false;
 }
 
-void mavrosCommand::arm(){
-	
+bool mavrosCommand::arm()
+{	
 	mavros_msgs::CommandBool srv;
 	
-	while(1){
-	srv.request.value = true;
-	_client.call(srv);
-	
-	if (srv.response.success) {
-	cout << "ARM SUCCESFUL" << endl;
-	break;
-	}else{
-		cout << "ARM FAIL" <<endl;
-		sleep(5);
+	for(int i =0; i < 3; i++)
+	{
+		srv.request.value = true;
+		_client.call(srv);
+
+		if (srv.response.success)
+		{
+			cout << "ARM SUCCESFUL" << endl;
+			return true;
+		}
+		else
+		{
+			cout << "ARM FAIL" <<endl;
+			sleep(5);
+		}
 	}
-	}
 	
+	return false;
 }
 
 
@@ -261,7 +279,7 @@ double mavrosCommand::getQrPositionY(){
 
 //others
 double mavrosCommand::toRad(double degree){
-    return degree/180 * PI;
+    return degree / 180 * PI;
 }
 
 bool mavrosCommand::isInPosition(double lat_current, double long_current, double lat_destination, double long_destination, double cordinatesPrecision){
@@ -286,6 +304,17 @@ double mavrosCommand::distanceBetweenCordinates(double lat1, double long1, doubl
     dist = acos(dist);
     dist = 6371 * dist * 1000;
     return dist;
+}
+
+double mavrosCommand::getBearingBetweenCoordinates(double lat1, double long1, double lat2, double long2)
+{
+    double x,y;
+    x = cos(toRad(lat2)) * sin(toRad(abs(long2 - long1)));
+    cout<< "X "<<x<<endl;
+    y = cos(toRad(lat1)) * sin(toRad(lat2)) - sin(toRad(lat1)) * cos(toRad(lat2)) * cos(toRad(abs(long2 - long1)));
+    cout<< "Y "<<y<<endl;
+ 
+    return atan2(x, y) / PI * 180;
 }
 
 void mavrosCommand::initSubscribers(){

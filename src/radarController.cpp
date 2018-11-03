@@ -14,10 +14,14 @@ RadarController::RadarController()
         fprintf(stderr, "insufficent memory, exit\n");
         exit(-2);
     }
+    
+    printf("RPLIDAR Version: " RPLIDAR_SDK_VERSION "\n");
 }
 
 RadarController::~RadarController()
 {
+	EndScan();
+
 	printf("Disposing RPLIDAR driver.\n");
     RPlidarDriver::DisposeDriver(drv);
     drv = NULL;
