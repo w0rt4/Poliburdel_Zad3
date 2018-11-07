@@ -8,6 +8,7 @@
 #include "sensor_msgs/LaserScan.h"
 #include "rplidar.h"
 #include "radarController.hpp"
+#include "realsenseImagetransport.hpp"
 
 using json = nlohmann::json;
 
@@ -58,6 +59,7 @@ bool flyToStartPosition(mavrosCommand command);
 bool flyHome(mavrosCommand command);
 bool landHome(mavrosCommand command);
 bool getCordinates(mavrosCommand command);
+int counter = 0;
 
 
 using namespace rp::standalone::rplidar;
@@ -66,10 +68,13 @@ int main(int argc, char* argv[])
 {
 	cout<<"initializaiton"<<endl;
 	ros::init(argc, argv, "rescue");
+	ros::NodeHandle nh;
 	
-	mavrosCommand command;
+	mavrosCommand command(&nh);
+	realsenseImagetransport rsImage(&nh);
 	MissionStatus missionStatus = Initialize;
 	RadarController radarController;
+	
 	
 	ros::Rate loop_rate(10);
 	sleep(1);
@@ -97,8 +102,6 @@ int main(int argc, char* argv[])
     
     radarController.StartScan();
     
-    cout << "Bearing "<< command.getBearingBetweenCoordinates(39.099912, -94.581213,38.627089,-90.200203) <<endl;
-
     // fetech result and print it out...
     while (ros::ok())
     {
@@ -130,7 +133,6 @@ int main(int argc, char* argv[])
 				continue;
 				break;
 			case BackToStart:
-				continue;
 				break;
 			case FlyToHome:
 				if(flyHome(command))
@@ -151,6 +153,16 @@ int main(int argc, char* argv[])
 				return 0;
 				break;
 		}
+
+		if(counter>=20)
+		{
+			cv_bridge::CvImageConstPtr cv_ptr = rsImage.getpicture();
+			cv::Mat frame = cv_ptr->image;
+			cv::imshow( "Display window", frame );
+			cv::waitKey(10);
+			
+			counter = 0;
+		}
 		
 		
 			rplidar_response_measurement_node_hq_t nodes[8192];
@@ -160,11 +172,11 @@ int main(int argc, char* argv[])
 				(nodes[0].angle_z_q14 >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT) / 64.0f,
 				nodes[0].dist_mm_q2 / 4.0f,
 				nodes[0].quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT);
-
+			counter++;
 			ros::spinOnce();
 			loop_rate.sleep();
     }
-
+	cv::destroyAllWindows();
 	return 0;
 }
 

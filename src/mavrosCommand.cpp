@@ -1,4 +1,3 @@
-#include <iostream>
 #include "mavrosCommand.hpp"
 
 using namespace std;
@@ -12,35 +11,30 @@ string get_username() {
         return "odroid";
 }
 
-mavrosCommand::mavrosCommand(){
+mavrosCommand::mavrosCommand(ros::NodeHandle* nodehandle):nh_(*nodehandle)
+{
+	_client = nh_.serviceClient<mavros_msgs::CommandBool>("/mavros/cmd/arming");
+	_clientTakeOff = nh_.serviceClient<mavros_msgs::CommandTOL>("/mavros/cmd/takeoff");
+	_clientGuided = nh_.serviceClient<mavros_msgs::SetMode>("/mavros/set_mode");
+	_clientLand = nh_.serviceClient<mavros_msgs::CommandTOL>("/mavros/cmd/land");
+	_clientServo = nh_.serviceClient<mavros_msgs::CommandLong>("/mavros/cmd/command");
+	_clientPicture = nh_.serviceClient<std_srvs::Empty>("/image_saver/save");
 	
-	_nh = ros::NodeHandle();
-	init();
+	_pub_mav = nh_.advertise<mavros_msgs::GlobalPositionTarget>("/mavros/setpoint_raw/global",100);
+	_pub_mavPositionTarget = nh_.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local",100);
+	
+	/////
+	_compassHeadingSub = nh_.subscribe("/mavros/global_position/compass_hdg", 100, &mavrosCommand::compassHeadingCb, this);
+	_adsbVehicleSub = nh_.subscribe("/mavros/adsb/vehicle", 100, &mavrosCommand::adsbVehicleCb, this);
+	_globalPositionGlobalSub = nh_.subscribe("/mavros/global_position/global", 100, &mavrosCommand::globalPositionGlobalCb, this);
+	_stateSub = nh_.subscribe("/mavros/state", 100, &mavrosCommand::stateCb, this);
+	_globalPositionRelAltitudeSub = nh_.subscribe("/mavros/global_position/rel_alt", 100, &mavrosCommand::globalPostionRelAltitudeCb, this);
+	_timeReferenceSub = nh_.subscribe("/mavros/time_reference", 100, &mavrosCommand::timeReferenceCb, this);
+	_qrMessageSub = nh_.subscribe("/visp_auto_tracker/code_message", 100, &mavrosCommand::qrMessageCb, this);
+	_qrPositionSub = nh_.subscribe("/visp_auto_tracker/object_position", 100, &mavrosCommand::qrPositionCb, this);
 }
 
 mavrosCommand::~mavrosCommand(){
-}
-
-void mavrosCommand::init(){
-	_client = _nh.serviceClient<mavros_msgs::CommandBool>("/mavros/cmd/arming");
-	_clientTakeOff = _nh.serviceClient<mavros_msgs::CommandTOL>("/mavros/cmd/takeoff");
-	_clientGuided = _nh.serviceClient<mavros_msgs::SetMode>("/mavros/set_mode");
-	_clientLand = _nh.serviceClient<mavros_msgs::CommandTOL>("/mavros/cmd/land");
-	_clientServo = _nh.serviceClient<mavros_msgs::CommandLong>("/mavros/cmd/command");
-	_clientPicture = _nh.serviceClient<std_srvs::Empty>("/image_saver/save");
-	
-	_pub_mav = _nh.advertise<mavros_msgs::GlobalPositionTarget>("/mavros/setpoint_raw/global",100);
-	_pub_mavPositionTarget = _nh.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local",100);
-	
-	/////
-	_compassHeadingSub = _nh.subscribe("/mavros/global_position/compass_hdg", 100, &mavrosCommand::compassHeadingCb, this);
-	_adsbVehicleSub = _nh.subscribe("/mavros/adsb/vehicle", 100, &mavrosCommand::adsbVehicleCb, this);
-	_globalPositionGlobalSub = _nh.subscribe("/mavros/global_position/global", 100, &mavrosCommand::globalPositionGlobalCb, this);
-	_stateSub = _nh.subscribe("/mavros/state", 100, &mavrosCommand::stateCb, this);
-	_globalPositionRelAltitudeSub = _nh.subscribe("/mavros/global_position/rel_alt", 100, &mavrosCommand::globalPostionRelAltitudeCb, this);
-	_timeReferenceSub = _nh.subscribe("/mavros/time_reference", 100, &mavrosCommand::timeReferenceCb, this);
-	_qrMessageSub = _nh.subscribe("/visp_auto_tracker/code_message", 100, &mavrosCommand::qrMessageCb, this);
-	_qrPositionSub = _nh.subscribe("/visp_auto_tracker/object_position", 100, &mavrosCommand::qrPositionCb, this);
 }
 
 void mavrosCommand::qrPositionCb(geometry_msgs::PoseStamped::ConstPtr msg) {
@@ -201,20 +195,16 @@ void mavrosCommand::flyTo(double latitude, double longitude, double altitude){
 	_pub_mav.publish(cmd_pos_glo);
 }
 
-void mavrosCommand::slowDown(double counterForce){
+void mavrosCommand::flyToLocal(double forward,double right, double up, float yaw ){
 	
-	cout<<"SLOWING DOWN"<<endl;
+	double yaw_rad = toRad(yaw) + PI/2;
 	cmd_pos_target.header.frame_id ="SET_POSITION_TARGET_LOCAL_NED";
 	cmd_pos_target.coordinate_frame = 9;
-	cmd_pos_target.type_mask = 4039;
-	cmd_pos_target.velocity.x = 0.0;
-	cmd_pos_target.velocity.y = -counterForce;
-	cmd_pos_target.velocity.z = 0.0;
-	cmd_pos_target.acceleration_or_force.x = 0.0;
-	cmd_pos_target.acceleration_or_force.y = 0.0;
-	cmd_pos_target.acceleration_or_force.z = 0.0;
-	cmd_pos_target.yaw = 0.0;
-	cmd_pos_target.yaw_rate = 0.0;
+	cmd_pos_target.type_mask = 3064;
+	cmd_pos_target.position.x = right;
+	cmd_pos_target.position.y = forward;
+	cmd_pos_target.position.z = up;
+	cmd_pos_target.yaw = yaw_rad;
 	
 	_pub_mavPositionTarget.publish(cmd_pos_target);
 }

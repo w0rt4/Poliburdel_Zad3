@@ -1,10 +1,10 @@
 #pragma once
 
 #include <iostream>
-#include "ros/ros.h"
+//#include "ros/ros.h"
 #include <fstream>
 #include <math.h>
-#include "mavrosCommand.hpp"
+//#include "mavrosCommand.hpp"
 #include "rplidar.h"
 
 using namespace rp::standalone::rplidar;

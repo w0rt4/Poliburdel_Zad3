@@ -29,7 +29,7 @@ string get_username();
 class mavrosCommand {
 public:
 	
-	mavrosCommand();
+	mavrosCommand(ros::NodeHandle* nodehandle);
 	
 	virtual ~mavrosCommand();
 	
@@ -43,7 +43,7 @@ public:
 	
 	//publishers
 	void flyTo(double latitude, double longitude, double altitude);
-	void slowDown(double counterForce);
+	void flyToLocal(double forward,double right, double up, float yaw );
 	
 	//subscribers
 	double getCompassHeading();
@@ -74,11 +74,9 @@ public:
 	double distanceBetweenCordinates(double lat1, double long1, double lat2, double long2);
 	double getBearingBetweenCoordinates(double lat1, double long1, double lat2, double long2);
 	void initSubscribers();
-	
+		
 private:
-	void init();
-	
-	ros::NodeHandle _nh;
+	ros::NodeHandle nh_;
 	
 	ros::ServiceClient _client;
 	ros::ServiceClient _clientTakeOff;
