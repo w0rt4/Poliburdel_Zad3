@@ -43,7 +43,7 @@ public:
 	
 	//publishers
 	void flyTo(double latitude, double longitude, double altitude);
-	void slowDown(double counterForce);
+	void flyToLocal(double forward, double right, double up, float yaw);
 	
 	//subscribers
 	double getCompassHeading();
