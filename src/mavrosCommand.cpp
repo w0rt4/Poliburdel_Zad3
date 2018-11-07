@@ -195,7 +195,7 @@ void mavrosCommand::flyTo(double latitude, double longitude, double altitude){
 	_pub_mav.publish(cmd_pos_glo);
 }
 
-void mavrosCommand::flyToLocal(double forward,double right, double up, float yaw ){
+void mavrosCommand::flyToLocal(double forward, double right, double up, float yaw){
 	
 	double yaw_rad = toRad(yaw) + PI/2;
 	cmd_pos_target.header.frame_id ="SET_POSITION_TARGET_LOCAL_NED";
@@ -299,12 +299,12 @@ double mavrosCommand::distanceBetweenCordinates(double lat1, double long1, doubl
 double mavrosCommand::getBearingBetweenCoordinates(double lat1, double long1, double lat2, double long2)
 {
     double x,y;
-    x = cos(toRad(lat2)) * sin(toRad(abs(long2 - long1)));
+    x = cos(toRad(lat2)) * sin(toRad(long2 - long1));
     cout<< "X "<<x<<endl;
-    y = cos(toRad(lat1)) * sin(toRad(lat2)) - sin(toRad(lat1)) * cos(toRad(lat2)) * cos(toRad(abs(long2 - long1)));
+    y = cos(toRad(lat1)) * sin(toRad(lat2)) - sin(toRad(lat1)) * cos(toRad(lat2)) * cos(toRad(long2 - long1));
     cout<< "Y "<<y<<endl;
- 
-    return atan2(x, y) / PI * 180;
+    
+    return fmod(atan2(x, y) / PI * 180 + 360, 360);
 }
 
 void mavrosCommand::initSubscribers(){

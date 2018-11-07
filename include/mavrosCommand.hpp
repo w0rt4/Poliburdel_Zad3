@@ -43,8 +43,8 @@ public:
 	
 	//publishers
 	void flyTo(double latitude, double longitude, double altitude);
-	void flyToLocal(double forward,double right, double up, float yaw );
-	
+	void flyToLocal(double forward, double right, double up, float yaw);
+
 	//subscribers
 	double getCompassHeading();
 	int getTime();
