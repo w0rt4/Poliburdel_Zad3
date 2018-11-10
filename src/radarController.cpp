@@ -27,10 +27,9 @@ RadarController::~RadarController()
     drv = NULL;
 }
 
-void RadarController::GetNodes(rplidar_response_measurement_node_hq_t (&nodes)[8192])
+void RadarController::GetNodes(rplidar_response_measurement_node_hq_t (&nodes)[8192], size_t &count)
 {
-	size_t   count = _countof(nodes);
-
+	count = _countof(nodes);
     op_result = drv->grabScanDataHq(nodes, count);
     
     if (IS_OK(op_result)) 

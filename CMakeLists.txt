@@ -25,7 +25,7 @@ find_package (GeographicLib 1.34 REQUIRED)
 
 find_package(Boost REQUIRED COMPONENTS system)
 
-find_package(OpenCV 3.4.2 REQUIRED)
+find_package(OpenCV)
 message("OpenCV version: ${OpenCV_VERSION}")
 
 set(wiringPi_include "usr/local/include")
@@ -60,5 +60,5 @@ catkin_package(
 )
 
 
-add_executable(rescue src/mavrosCommandMain.cpp src/mavrosCommand.cpp ${RPLIDAR_SDK_SRC} src/radarController.cpp src/realsenseImagetransport.cpp)
+add_executable(rescue src/mavrosCommandMain.cpp src/mavrosCommand.cpp ${RPLIDAR_SDK_SRC} src/radarController.cpp src/flyController.cpp src/realsenseImagetransport.cpp)
 target_link_libraries(rescue ${catkin_LIBRARIES} wiringPi ${OpenCV_LIBS})

@@ -300,9 +300,7 @@ double mavrosCommand::getBearingBetweenCoordinates(double lat1, double long1, do
 {
     double x,y;
     x = cos(toRad(lat2)) * sin(toRad(long2 - long1));
-    cout<< "X "<<x<<endl;
     y = cos(toRad(lat1)) * sin(toRad(lat2)) - sin(toRad(lat1)) * cos(toRad(lat2)) * cos(toRad(long2 - long1));
-    cout<< "Y "<<y<<endl;
     
     return fmod(atan2(x, y) / PI * 180 + 360, 360);
 }

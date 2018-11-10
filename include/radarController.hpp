@@ -1,10 +1,8 @@
 #pragma once
 
 #include <iostream>
-//#include "ros/ros.h"
 #include <fstream>
 #include <math.h>
-//#include "mavrosCommand.hpp"
 #include "rplidar.h"
 
 using namespace rp::standalone::rplidar;
@@ -15,7 +13,7 @@ class RadarController
 		RadarController();
 		~RadarController();
 		bool ConnectionSuccess;
-		void GetNodes(rplidar_response_measurement_node_hq_t (&nodes)[8192]);
+		void GetNodes(rplidar_response_measurement_node_hq_t (&nodes)[8192], size_t &count);
 		void Initialize();
 		bool CheckRPLIDARHealth();
 		void PrintInfo();

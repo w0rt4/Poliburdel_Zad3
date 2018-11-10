@@ -1,14 +1,15 @@
 #include <iostream>
-#include "ros/ros.h"
 #include <fstream>
 #include <math.h>
-#include "mavrosCommand.hpp"
 #include <nlohmann/json.hpp>
 #include <wiringPi.h>
+#include "ros/ros.h"
 #include "sensor_msgs/LaserScan.h"
 #include "rplidar.h"
 #include "radarController.hpp"
+#include "flyController.hpp"
 #include "realsenseImagetransport.hpp"
+#include "mavrosCommand.hpp"
 
 using json = nlohmann::json;
 
@@ -21,11 +22,7 @@ struct home
 	double Altitude;
 } Home;
 
-struct target
-{
-	double Latitude;
-	double Longitude;
-} Target;
+FlyController::target Target;
 
 struct start
 {
@@ -59,7 +56,6 @@ bool flyToStartPosition(mavrosCommand command);
 bool flyHome(mavrosCommand command);
 bool landHome(mavrosCommand command);
 bool getCordinates(mavrosCommand command);
-void decideWhereToFly(mavrosCommand command, rplidar_response_measurement_node_hq_t nodes[8192]);
 
 int counter = 0;
 
@@ -75,6 +71,7 @@ int main(int argc, char* argv[])
 	realsenseImagetransport rsImage(&nh);
 	MissionStatus missionStatus = Initialize;
 	RadarController radarController;
+	FlyController flyController;
 	
 	
 	ros::Rate loop_rate(10);
@@ -102,8 +99,7 @@ int main(int argc, char* argv[])
     }
     
     radarController.StartScan();
-    
-    // fetech result and print it out...
+    missionStatus = StartRescue;
     while (ros::ok())
     {
 		switch (missionStatus)
@@ -131,6 +127,10 @@ int main(int argc, char* argv[])
 				continue;
 				break;
 			case StartRescue:
+				rplidar_response_measurement_node_hq_t nodes[8192];
+				size_t count;
+				radarController.GetNodes(nodes, count); 
+				flyController.sendCommandToDron(command, nodes, count, Target);
 				continue;
 				break;
 			case BackToStart:
@@ -167,7 +167,8 @@ int main(int argc, char* argv[])
 		
 		
 			rplidar_response_measurement_node_hq_t nodes[8192];
-			radarController.GetNodes(nodes); 
+			size_t count;
+			radarController.GetNodes(nodes, count); 
 			printf("%s theta: %03.2f Dist: %08.2f Q: %d \n", 
 				(nodes[0].quality & RPLIDAR_RESP_MEASUREMENT_SYNCBIT) ? "S " : "  ", 
 				(nodes[0].angle_z_q14 >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT) / 64.0f,
@@ -301,51 +302,4 @@ bool getCordinates(mavrosCommand command)
  	Target.Latitude = missionSettings["mission"]["target"]["latitude"];
  	
 	return true;
-}
-
-void decideWhereToFly(mavrosCommand command, rplidar_response_measurement_node_hq_t nodes[8192])
-{
-	double bearingToTarget = command.getBearingBetweenCoordinates(command.getGlobalPositionLatitude(), command.getGlobalPositionLatitude(), Target.Latitude, Target.Longitude);
-	double angleFromDronePerspetive = fmod((0 - command.getCompassHeading() - bearingToTarget) + 360, 360); 
-	
-	for(int i = 0; i < 8192; i++)
-	{
-		if(((nodes[i].angle_z_q14 >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT) / 64.0f) >= angleFromDronePerspetive - 2.5 * (i + 1) 
-		&& ((nodes[i].angle_z_q14 >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT) / 64.0f) <= angleFromDronePerspetive + 2.5 * (i + 1)
-		&& (nodes[i].dist_mm_q2 / 4.0f) >= 1200)
-		{
-			bool hasSpace= true;
-			for(int j = 0; j < 8192; j++)
-			{
-				if(((nodes[j].angle_z_q14 >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT) / 64.0f) >= ((nodes[i].angle_z_q14 >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT) / 64.0f) - 2.5 
-				&& ((nodes[j].angle_z_q14 >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT) / 64.0f) <= ((nodes[i].angle_z_q14 >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT) / 64.0f) + 2.5)
-				{
-					if((nodes[j].dist_mm_q2 / 4.0f) < 1200)
-					{
-						hasSpace = false;
-						break;
-					}
-				}
-				else
-				{
-					continue;
-				}
-			}
-			
-			if(hasSpace)
-			{
-				float direction = ((nodes[i].angle_z_q14 >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT) / 64.0f);
-				float angleToTurn;
-				
-				if(direction > 180)
-				{
-					angleToTurn = 360 - direction;
-				}
-				else
-				{
-					angleToTurn = direction;
-				}
-			}
-		}
-	}
 }
