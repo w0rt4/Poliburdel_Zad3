@@ -37,15 +37,6 @@ mavrosCommand::mavrosCommand(ros::NodeHandle* nodehandle):nh_(*nodehandle)
 mavrosCommand::~mavrosCommand(){
 }
 
-void mavrosCommand::qrPositionCb(geometry_msgs::PoseStamped::ConstPtr msg) {
-	_qrPositionX = msg->pose.position.x;
-	_qrPositionY = msg->pose.position.y;
-}
-
-void mavrosCommand::qrMessageCb(std_msgs::String::ConstPtr msg) {
-	_qrMessage = msg->data;
-}
-
 void mavrosCommand::adsbVehicleCb(mavros_msgs::ADSBVehicle::ConstPtr msg) {
 	
 	_adsbICAO = msg->ICAO_address;
@@ -53,7 +44,6 @@ void mavrosCommand::adsbVehicleCb(mavros_msgs::ADSBVehicle::ConstPtr msg) {
 	_adsbVelocity = msg->hor_velocity;
 	_adsbLatitude = msg->latitude;
 	_adsbLongitude = msg->longitude;
-
 }
 
 void mavrosCommand::globalPositionGlobalCb(sensor_msgs::NavSatFix::ConstPtr msg){
@@ -112,14 +102,6 @@ void mavrosCommand::land(){
 	
 }
 
-void mavrosCommand::picture(){
-	std_srvs::Empty srv_picture;
-	_clientPicture.call(srv_picture);
-	cout<<"PICTURE CAPTURED"<<endl;
-	//if (srv_picture.response.success)cout<<"PICTURE CAPTURED"<<endl;
-	//else cout<<"PICTURE FAIL"<<endl;
-}
-
 void mavrosCommand::servo(double width){//width 1000-2000
 	
 	mavros_msgs::CommandLong srv_servo;
@@ -172,8 +154,6 @@ bool mavrosCommand::arm()
 	
 	return false;
 }
-
-
 
 void mavrosCommand::flyTo(double latitude, double longitude, double altitude){
 	
@@ -256,15 +236,6 @@ bool mavrosCommand::getGuided(){
 }
 string mavrosCommand::getState(){
 	return _state;
-}
-string mavrosCommand::getQrValue(){
-	return _qrMessage;
-}
-double mavrosCommand::getQrPositionX(){
-	return _qrPositionX;
-}
-double mavrosCommand::getQrPositionY(){
-	return _qrPositionY;
 }
 
 //others

@@ -39,7 +39,6 @@ public:
 	bool arm();
 	void takeOff(double altitude);
 	void servo(double width);
-	void picture();
 	
 	//publishers
 	void flyTo(double latitude, double longitude, double altitude);
@@ -64,9 +63,6 @@ public:
 	bool getArmed();
 	bool getGuided();
 	string getState();
-	string getQrValue();
-	double getQrPositionX();
-	double getQrPositionY();
 	
 	//others
 	double toRad(double degree);
@@ -83,7 +79,6 @@ private:
 	ros::ServiceClient _clientGuided;
 	ros::ServiceClient _clientLand;
 	ros::ServiceClient _clientServo;
-	ros::ServiceClient _clientPicture;
 	
 	ros::Publisher _pub_mav;
 	ros::Publisher _pub_mavPositionTarget;
@@ -97,8 +92,6 @@ private:
 	void stateCb(mavros_msgs::State::ConstPtr msg);
 	void globalPostionRelAltitudeCb(std_msgs::Float64::ConstPtr msg);
 	void timeReferenceCb(sensor_msgs::TimeReference::ConstPtr msg);
-	void qrMessageCb(std_msgs::String::ConstPtr msg);
-	void qrPositionCb(geometry_msgs::PoseStamped::ConstPtr msg);
 		
 	//Subscribers
 	ros::Subscriber _adsbVehicleSub;
@@ -107,8 +100,6 @@ private:
 	ros::Subscriber _stateSub;
 	ros::Subscriber _globalPositionRelAltitudeSub;
 	ros::Subscriber _timeReferenceSub;
-	ros::Subscriber _qrMessageSub;
-	ros::Subscriber _qrPositionSub;
 	
 	//adsb/vehicle
 	int _adsbICAO;
@@ -130,12 +121,6 @@ private:
 	
 	//timeReference
 	time_t _time;
-	
-	//qrMessage
-	string _qrMessage;
-	
-	//qrPosition
-	double _qrPositionX, _qrPositionY;
 };
 
 
