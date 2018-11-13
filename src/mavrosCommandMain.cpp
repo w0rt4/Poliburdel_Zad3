@@ -23,12 +23,7 @@ struct home
 } Home;
 
 FlyController::target Target;
-
-struct start
-{
-	double Latitude;
-	double Longitude;
-} Start;
+FlyController::target Start;
 
 struct mission
 {
@@ -110,44 +105,56 @@ int main(int argc, char* argv[])
 					return 1;
 				}
 				missionStatus = TakeOff;
-				continue;
 				break;
 			case TakeOff:
 				if(takeOffHome(command))
 				{
 					missionStatus = FlyToStart;
 				}
-				continue;
 				break;
 			case FlyToStart:
 				if(flyToStartPosition(command))
 				{
 					missionStatus = StartRescue;
 				}
-				continue;
 				break;
 			case StartRescue:
-				rplidar_response_measurement_node_hq_t nodes[8192];
-				size_t count;
-				radarController.GetNodes(nodes, count); 
-				flyController.sendCommandToDron(command, nodes, count, Target);
-				continue;
+				if(command.isInPosition(command.getGlobalPositionLatitude(), command.getGlobalPositionLongitude(), Target.Latitude, Target.Longitude, 0.00006))
+				{
+					missionStatus = BackToStart;
+				}
+				else
+				{
+					rplidar_response_measurement_node_hq_t nodes[8192];
+					size_t count;
+					radarController.GetNodes(nodes, count); 
+					flyController.sendCommandToDron(command, nodes, count, Target);
+				}
 				break;
 			case BackToStart:
+				if(command.isInPosition(command.getGlobalPositionLatitude(), command.getGlobalPositionLongitude(), Start.Latitude, Start.Longitude, 0.00006))
+				{
+					missionStatus = BackToStart;
+				}
+				else
+				{
+					rplidar_response_measurement_node_hq_t nodes[8192];
+					size_t count;
+					radarController.GetNodes(nodes, count); 
+					flyController.sendCommandToDron(command, nodes, count, Start);
+				}
 				break;
 			case FlyToHome:
 				if(flyHome(command))
 				{
 					missionStatus = LandHome;
 				}
-				continue;
 				break;
 			case LandHome:
 				if(landHome(command))
 				{
 					missionStatus = End;
 				}
-				continue;
 				break;
 			default:
 				cout << "MISSION END!" << endl;
@@ -155,7 +162,7 @@ int main(int argc, char* argv[])
 				break;
 		}
 
-		if(counter>=20)
+		/*if(counter>=20)
 		{
 			cv_bridge::CvImageConstPtr cv_ptr = rsImage.getpicture();
 			cv::Mat frame = cv_ptr->image;
@@ -163,21 +170,12 @@ int main(int argc, char* argv[])
 			cv::waitKey(10);
 			
 			counter = 0;
-		}
+		}*/
 		
-		
-			rplidar_response_measurement_node_hq_t nodes[8192];
-			size_t count;
-			radarController.GetNodes(nodes, count); 
-			printf("%s theta: %03.2f Dist: %08.2f Q: %d \n", 
-				(nodes[0].quality & RPLIDAR_RESP_MEASUREMENT_SYNCBIT) ? "S " : "  ", 
-				(nodes[0].angle_z_q14 >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT) / 64.0f,
-				nodes[0].dist_mm_q2 / 4.0f,
-				nodes[0].quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT);
-			counter++;
-			ros::spinOnce();
-			loop_rate.sleep();
+		ros::spinOnce();
+		loop_rate.sleep();
     }
+    
 	cv::destroyAllWindows();
 	return 0;
 }
@@ -290,7 +288,7 @@ bool getCordinates(mavrosCommand command)
 {
 	string name = get_username();
 	
-	ifstream theFile("/home/" + name + "/catkin_ws/src/Poliburdel_Zad3/mission.json");
+	ifstream theFile("/home/odroid/catkin_ws/src/Poliburdel_Zad3/mission.json");
 	json missionSettings = json::parse(theFile);
 	theFile.close();
  	

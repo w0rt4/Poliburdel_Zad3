@@ -5,17 +5,42 @@ using namespace rp::standalone::rplidar;
 
 void FlyController::sendCommandToDron(mavrosCommand command, rplidar_response_measurement_node_hq_t nodes[8192], size_t count, target Target)
 {
-	auto begin = chrono::high_resolution_clock::now();
-	moveDroneCommand droneCommand = decideWhereToFly(command, nodes, count, Target);
-	auto end = chrono::high_resolution_clock::now();
-	cout << "Time spend in function: "<<std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()<<"ms"<<endl;
-	if(droneCommand.IsCorrect)
+	switch (instruction)
 	{
-		cout<<"Diretion is: "<<droneCommand.Yaw<<endl;
-	}
-	else
-	{
-		cout<<"Error when decide to fly. No command was send"<<endl;
+		case Turning:
+			if (isTurning)
+			{
+				if (abs(command.getCompassHeading() - targetAngle) <= 2)
+				{
+					isTurning = false;
+					targetAngle = 0;
+					
+					instruction = Moving;
+				}
+			}
+			else
+			{
+				auto begin = chrono::high_resolution_clock::now();
+				moveDroneCommand droneCommand = decideWhereToFly(command, nodes, count, Target);
+				auto end = chrono::high_resolution_clock::now();
+				cout << "Time spend in function: "<<std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()<<"ms"<<endl;
+				if(droneCommand.IsCorrect)
+				{
+					cout<<"Diretion is: "<<droneCommand.Yaw<<endl;
+				}
+				else
+				{
+					cout<<"Error when decide to fly. No command was send"<<endl;
+				}
+				
+				targetAngle = droneCommand.TargetBearing;
+				isTurning = true;
+				command.flyToLocal(0, 0, 0, droneCommand.Yaw);
+			}
+			break;
+		case Moving:
+			command.flyToLocal(1, 0, 0, 0);
+			break;
 	}
 }
 
@@ -39,7 +64,7 @@ FlyController::moveDroneCommand FlyController::decideWhereToFly(mavrosCommand co
 		{
 			if((fmod(((nodes[i].angle_z_q14 * 90.f / (1 << 14)) - fmod((angleFromDronePerspetive - 5 * x) + 360, 360)) + 360, 360) <= 5 * x
 			|| fmod(fmod((angleFromDronePerspetive + 5 * x) + 360, 360) - (nodes[i].angle_z_q14 * 90.f / (1 << 14)) + 360, 360) <= 5 * x)
-			&& (nodes[i].dist_mm_q2 / 4.0f) >= 1200
+			&& (nodes[i].dist_mm_q2 / 4.0f) >= 2000
 			&& (nodes[i].quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT) != 0)
 			{
 				bool hasSpace= true;
@@ -49,7 +74,7 @@ FlyController::moveDroneCommand FlyController::decideWhereToFly(mavrosCommand co
 					|| fmod((((nodes[i].angle_z_q14 * 90.f / (1 << 14)) + 15) - (nodes[j].angle_z_q14 * 90.f / (1 << 14))) + 360, 360) <= 15)
 					&& (nodes[j].quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT) != 0)
 					{
-						if((nodes[j].dist_mm_q2 / 4.0f) < 1200)
+						if((nodes[j].dist_mm_q2 / 4.0f) < 2000)
 						{
 							hasSpace = false;
 							break;
@@ -67,14 +92,14 @@ FlyController::moveDroneCommand FlyController::decideWhereToFly(mavrosCommand co
 					
 					if(direction > 180)
 					{
-						droneCommand.Yaw = direction - 180;
+						droneCommand.Yaw = 360 - direction;
 					}
 					else
 					{
 						droneCommand.Yaw = -direction;
 					}
 					
-					droneCommand.CanBeStoped = false;
+					droneCommand.TargetBearing = bearingToTarget;
 					droneCommand.IsCorrect = true;
 					//cin >> fake;
 					return droneCommand;
@@ -84,6 +109,14 @@ FlyController::moveDroneCommand FlyController::decideWhereToFly(mavrosCommand co
 	}
 	
 	droneCommand.IsCorrect = false;	
+	if(angleFromDronePerspetive > 180)
+	{
+		droneCommand.Yaw = 360 - angleFromDronePerspetive;
+	}
+	else
+	{
+		droneCommand.Yaw = -angleFromDronePerspetive;
+	}
 	//cin >> fake;
 	return droneCommand;
 }
