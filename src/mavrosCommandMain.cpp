@@ -121,27 +121,27 @@ int main(int argc, char* argv[])
 			case StartRescue:
 				if(command.isInPosition(command.getGlobalPositionLatitude(), command.getGlobalPositionLongitude(), Target.Latitude, Target.Longitude, 0.00006))
 				{
-					missionStatus = BackToStart;
+					missionStatus = CallForPackage;
 				}
 				else
 				{
-					rplidar_response_measurement_node_hq_t nodes[8192];
-					size_t count;
-					radarController.GetNodes(nodes, count); 
-					flyController.sendCommandToDron(command, nodes, count, Target);
+					flyController.sendCommandToDron(command, radarController, Target);
+				}
+				break;
+			case CallForPackage:
+				if(flyController.searchForTarget(command, radarController))
+				{
+					missionStatus = BackToStart;
 				}
 				break;
 			case BackToStart:
 				if(command.isInPosition(command.getGlobalPositionLatitude(), command.getGlobalPositionLongitude(), Start.Latitude, Start.Longitude, 0.00006))
 				{
-					missionStatus = BackToStart;
+					missionStatus = FlyToHome;
 				}
 				else
 				{
-					rplidar_response_measurement_node_hq_t nodes[8192];
-					size_t count;
-					radarController.GetNodes(nodes, count); 
-					flyController.sendCommandToDron(command, nodes, count, Start);
+					flyController.sendCommandToDron(command, radarController, Start);
 				}
 				break;
 			case FlyToHome:
@@ -288,7 +288,7 @@ bool getCordinates(mavrosCommand command)
 {
 	string name = get_username();
 	
-	ifstream theFile("/home/odroid/catkin_ws/src/Poliburdel_Zad3/mission.json");
+	ifstream theFile("/home/w0rt4/drony/catkin_ws/src/Poliburdel_Zad3/mission.json");
 	json missionSettings = json::parse(theFile);
 	theFile.close();
  	

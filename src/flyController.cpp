@@ -1,9 +1,8 @@
 #include "flyController.hpp"
-#include <chrono>
 
 using namespace rp::standalone::rplidar;
 
-void FlyController::sendCommandToDron(mavrosCommand command, rplidar_response_measurement_node_hq_t nodes[8192], size_t count, target Target)
+void FlyController::sendCommandToDron(mavrosCommand command, RadarController radarController, target Target)
 {
 	switch (instruction)
 	{
@@ -20,6 +19,10 @@ void FlyController::sendCommandToDron(mavrosCommand command, rplidar_response_me
 			}
 			else
 			{
+				rplidar_response_measurement_node_hq_t nodes[8192];
+				size_t count;
+				radarController.GetNodes(nodes, count); 
+					
 				auto begin = chrono::high_resolution_clock::now();
 				moveDroneCommand droneCommand = decideWhereToFly(command, nodes, count, Target);
 				auto end = chrono::high_resolution_clock::now();
@@ -39,7 +42,21 @@ void FlyController::sendCommandToDron(mavrosCommand command, rplidar_response_me
 			}
 			break;
 		case Moving:
-			command.flyToLocal(1, 0, 0, 0);
+			if(isMoving)
+			{
+				auto now = chrono::high_resolution_clock::now();
+				if(std::chrono::duration_cast<std::chrono::milliseconds>(now - movingStartTime).count() >= 2000)
+				{
+					isMoving = false;
+					instruction = Turning;
+				}
+			}
+			else
+			{
+				command.flyToLocal(1, 0, 0, 0);
+				movingStartTime = chrono::high_resolution_clock::now();
+				isMoving = true;
+			}
 			break;
 	}
 }
@@ -49,14 +66,6 @@ FlyController::moveDroneCommand FlyController::decideWhereToFly(mavrosCommand co
 	double bearingToTarget = command.getBearingBetweenCoordinates(command.getGlobalPositionLatitude(), command.getGlobalPositionLatitude(), Target.Latitude, Target.Longitude);
 	double angleFromDronePerspetive = fmod(0 - (command.getCompassHeading() - bearingToTarget) + 360, 360); 
 	FlyController::moveDroneCommand droneCommand;
-	int fake;
-	
-	/*for(int i = 0; i < count; i++)
-	{
-		cout << "S nr:"<< i<<" angle:"<<nodes[i].angle_z_q14 * 90.f / (1 << 14)<<" distance: "<<((nodes[i].dist_mm_q2 / 4.0f))<<endl;
-	}
-	
-	cout<<"count: "<<count<<endl;*/
 	
 	for(int x = 1; x <= 36; x++)
 	{
@@ -101,7 +110,7 @@ FlyController::moveDroneCommand FlyController::decideWhereToFly(mavrosCommand co
 					
 					droneCommand.TargetBearing = bearingToTarget;
 					droneCommand.IsCorrect = true;
-					//cin >> fake;
+					
 					return droneCommand;
 				}
 			}
@@ -117,6 +126,34 @@ FlyController::moveDroneCommand FlyController::decideWhereToFly(mavrosCommand co
 	{
 		droneCommand.Yaw = -angleFromDronePerspetive;
 	}
-	//cin >> fake;
+
 	return droneCommand;
+}
+
+bool FlyController::searchForTarget(mavrosCommand command, RadarController radarController)
+{
+	if(scanCount > 13)
+	{
+		// wzywamy malego na obecna pozycje drona
+		return true;
+	}
+	
+	if(isScaning)
+	{
+		if (abs(command.getCompassHeading() - targetAngle) <= 2)
+		{
+			scanCount++;
+			isScaning = false;
+			
+			// poszukiwanie goscia z kamery
+			//jak sie udalo to wzywamy malego i return true
+		}
+	}
+	else
+	{
+		targetAngle = command.getCompassHeading() + 20;
+		command.flyToLocal(0, 0, 0, -20);
+	}
+	
+	return false;
 }
