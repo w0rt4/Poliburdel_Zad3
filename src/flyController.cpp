@@ -73,17 +73,16 @@ FlyController::moveDroneCommand FlyController::decideWhereToFly(mavrosCommand co
 		{
 			if((fmod(((nodes[i].angle_z_q14 * 90.f / (1 << 14)) - fmod((angleFromDronePerspetive - 5 * x) + 360, 360)) + 360, 360) <= 5 * x
 			|| fmod(fmod((angleFromDronePerspetive + 5 * x) + 360, 360) - (nodes[i].angle_z_q14 * 90.f / (1 << 14)) + 360, 360) <= 5 * x)
-			&& (nodes[i].dist_mm_q2 / 4.0f) >= 2000
-			&& (nodes[i].quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT) != 0)
+			&& ((nodes[i].dist_mm_q2 / 4.0f) >= 2000
+			|| (nodes[i].quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT) == 0))
 			{
 				bool hasSpace= true;
 				for(int j = 0; j < 8192; j++)
 				{
 					if((fmod(((nodes[j].angle_z_q14 * 90.f / (1 << 14)) - ((nodes[i].angle_z_q14 * 90.f / (1 << 14)) - 15)) + 360, 360) <= 15
-					|| fmod((((nodes[i].angle_z_q14 * 90.f / (1 << 14)) + 15) - (nodes[j].angle_z_q14 * 90.f / (1 << 14))) + 360, 360) <= 15)
-					&& (nodes[j].quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT) != 0)
+					|| fmod((((nodes[i].angle_z_q14 * 90.f / (1 << 14)) + 15) - (nodes[j].angle_z_q14 * 90.f / (1 << 14))) + 360, 360) <= 15))
 					{
-						if((nodes[j].dist_mm_q2 / 4.0f) < 2000)
+						if((nodes[j].dist_mm_q2 / 4.0f) < 2000	&& (nodes[j].quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT) != 0)
 						{
 							hasSpace = false;
 							break;
