@@ -8,7 +8,6 @@
 #include "rplidar.h"
 #include "radarController.hpp"
 #include "flyController.hpp"
-#include "realsenseImagetransport.hpp"
 #include "mavrosCommand.hpp"
 
 using json = nlohmann::json;
@@ -129,7 +128,7 @@ int main(int argc, char* argv[])
 				}
 				break;
 			case CallForPackage:
-				if(flyController.searchForTarget(command, radarController))
+				if(flyController.searchForTarget(command, radarController, rsImage))
 				{
 					missionStatus = BackToStart;
 				}

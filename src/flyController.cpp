@@ -129,11 +129,10 @@ FlyController::moveDroneCommand FlyController::decideWhereToFly(mavrosCommand co
 	return droneCommand;
 }
 
-bool FlyController::searchForTarget(mavrosCommand command, RadarController radarController)
+bool FlyController::searchForTarget(mavrosCommand command, RadarController radarController, realsenseImagetransport rsImage)
 {
 	if(scanCount > 13)
 	{
-		// wzywamy malego na obecna pozycje drona
 		return true;
 	}
 	
@@ -146,6 +145,8 @@ bool FlyController::searchForTarget(mavrosCommand command, RadarController radar
 			
 			// poszukiwanie goscia z kamery
 			//jak sie udalo to wzywamy malego i return true
+			cv_bridge::CvImageConstPtr cv_ptr = rsImage.getpicture();
+			cv::Mat frame = cv_ptr->image;
 		}
 	}
 	else

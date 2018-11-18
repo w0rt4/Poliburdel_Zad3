@@ -6,6 +6,7 @@
 #include <math.h>
 #include "mavrosCommand.hpp"
 #include "radarController.hpp"
+#include "realsenseImagetransport.hpp"
 #include "rplidar.h"
 #include <chrono>
 
@@ -33,7 +34,7 @@ class FlyController
 		
 		void sendCommandToDron(mavrosCommand command, RadarController radarController, target Target);
 		moveDroneCommand decideWhereToFly(mavrosCommand command, rplidar_response_measurement_node_hq_t nodes[8192], size_t count, target Target);
-		bool searchForTarget(mavrosCommand command, RadarController radarController);
+		bool searchForTarget(mavrosCommand command, RadarController radarController, realsenseImagetransport rsImage);
 		
 	private:
 		enum instructionType
